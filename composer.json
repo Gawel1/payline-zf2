@@ -15,7 +15,10 @@
     "autoload": {
         "psr-0": {
             "Payline": "src/"
-        }
+        },
+        "classmap": [
+            "SDK/"
+        ]
     },
     "require": {
         "php":                               ">=5.3.3",
