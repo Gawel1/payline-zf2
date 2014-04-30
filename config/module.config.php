@@ -4,7 +4,7 @@ use Payline\Service\PaylineAwareInterface;
 return [
     'service_manager' => [
         'invokables' => [
-            'Payline\Service\Payline' => 'Payline\Service\Payline'
+            'Payline\Service\Payline' => 'Payline\Service\PaylineService'
         ],
         'aliases' => [
             'payline' => 'Payline\Service\Payline'
