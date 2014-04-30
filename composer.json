@@ -1,5 +1,5 @@
 {
-    "name": "Gawel1/payline-zf2",
+    "name": "gawel1/payline-zf2",
     "description": "ZF2 module to using Payline SDK",
     "type" : "zf2-module",
     "authors": [
