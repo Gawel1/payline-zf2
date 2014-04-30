@@ -17,7 +17,8 @@
             "Payline": "src/"
         },
         "classmap": [
-            "SDK/"
+            "SDK/",
+            "./Module.php"
         ]
     },
     "require": {
