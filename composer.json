@@ -21,7 +21,6 @@
         "php":                               ">=5.3.3",
         "zendframework/zendframework":       "2.*"
     },
-    "minimum-stability": "dev",
     "require": {
     }
  }
