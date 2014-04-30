@@ -1,0 +1,27 @@
+{
+    "name": "Gawel1/payline-zf2",
+    "description": "ZF2 module to using Payline SDK",
+    "type" : "zf2-module",
+    "authors": [
+        {
+            "name": "Gael CRISPYN",
+            "email": "gcrispyn@assessfirst.com"
+        }
+    ],
+    "keywords": [
+        "zf2",
+        "payline"
+    ],
+    "autoload": {
+        "psr-0": {
+            "SDK": "src/SDK/"
+        }
+    },
+    "require": {
+        "php":                               ">=5.3.3",
+        "zendframework/zendframework":       "2.*"
+    },
+    "minimum-stability": "dev",
+    "require": {
+    }
+ }
