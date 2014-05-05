@@ -1,5 +1,6 @@
 <?php
 use Payline\Service\PaylineAwareInterface;
+use Payline\Exception\InvalidArgumentException;
 
 return [
     'service_manager' => [
@@ -10,11 +11,7 @@ return [
             'payline' => 'Payline\Service\Payline'
         ],
         'initializers' => [
-            function ($instance, $sm) {
-                if($instance instanceof PaylineAwareInterface) {
-                    $instance->setClient(new \paylineSDK());
-                }
-            }
+            'Payline\Service\PaylineInitializer'
         ]
     ]
 ];
