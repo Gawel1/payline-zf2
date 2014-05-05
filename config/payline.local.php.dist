@@ -1,6 +1,8 @@
 <?php
 //     return [
 //         'payline' => [
+//             'version'        => "3",
+//             'contracts'      => [],
 //             'merchant_id'    => '',
 //             'access_key'     => '',
 //             'proxy_host'     => '',
