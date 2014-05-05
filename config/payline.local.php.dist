@@ -1,0 +1,12 @@
+<?php
+//     return [
+//         'payline' => [
+//             'merchant_id'    => '',
+//             'access_key'     => '',
+//             'proxy_host'     => '',
+//             'proxy_port'     => '',
+//             'proxy_login'    => '',
+//             'proxy_password' => '',
+//             'production'     => ''
+//         ]
+//     ];
