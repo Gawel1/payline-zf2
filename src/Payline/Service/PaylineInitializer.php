@@ -51,16 +51,6 @@ class PaylineInitializer implements InitializerInterface
             return false;
         }
 
-        if (! isset($params['payline']['proxy_host'])) {
-            throw new InvalidArgumentException("You didn't set the proxy host param in config");
-            return false;
-        }
-
-        if (! isset($params['payline']['proxy_port'])) {
-            throw new InvalidArgumentException("You didn't set the proxy port param in config");
-            return false;
-        }
-
         if (! isset($params['payline']['proxy_login'])) {
             throw new InvalidArgumentException("You didn't set the proxy login param in config");
             return false;
