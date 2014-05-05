@@ -16,14 +16,15 @@ class PaylineInitializer implements InitializerInterface
         if($instance instanceof PaylineAwareInterface) {
             $config = $serviceLocator->get('config');
             if ($this->validParams($config)) {
-                $instance->setClient(new \paylineSDKZF2(
+                $instance->setClient(new \SDK\paylineSDKZF2(
                     $config['payline']['merchant_id'],
                     $config['payline']['access_key'],
                     $config['payline']['proxy_host'],
                     $config['payline']['proxy_port'],
                     $config['payline']['proxy_login'],
                     $config['payline']['proxy_password'],
-                    $config['payline']['production']
+                    $config['payline']['production'],
+                    $serviceLocator
                 ));
             }
         }
