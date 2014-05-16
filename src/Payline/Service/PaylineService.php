@@ -67,4 +67,17 @@ class PaylineService implements PaylineAwareInterface
             self::CANADIAN_DOLLAR_CURRENCY
         ];
     }
+    
+    /**
+     * Get all authorization modes
+     * 
+     * @return array
+     */
+    public static function getAuthorizationModes()
+    {
+        return [
+            self::AUTHORIZATION,
+            self::AUTHORIZATION_VALIDATION
+        ];  
+    }
 }
