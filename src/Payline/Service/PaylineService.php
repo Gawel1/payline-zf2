@@ -19,6 +19,10 @@ class PaylineService implements PaylineAwareInterface
     const POUND_STERLING_CURRENCY     = 826;
     const CANADIAN_DOLLAR_CURRENCY    = 124;
 
+    const AUTHORIZATION               = 100;
+    const AUTHORIZATION_VALIDATION    = 101;
+
+
     /**
      * Execute web paiment and catch response
      *
