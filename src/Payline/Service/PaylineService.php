@@ -38,6 +38,19 @@ class PaylineService implements PaylineAwareInterface
     }
 
     /**
+     * Get the payment details with the token of the transaction
+     *
+     * @param string $token
+     *
+     * @return array
+     */
+    public function getWebPaymentDetails($token)
+    {
+        $config = $this->getClient()->getServiceLocator()->get('config');
+        return $this->getClient()->getWebPaymentDetails(['version' => $config['version'], $token]);
+    }
+
+    /**
      * Get all the paiement modes of the API
      *
      * @return array
@@ -67,10 +80,10 @@ class PaylineService implements PaylineAwareInterface
             self::CANADIAN_DOLLAR_CURRENCY
         ];
     }
-    
+
     /**
      * Get all authorization modes
-     * 
+     *
      * @return array
      */
     public static function getAuthorizationModes()
@@ -78,6 +91,6 @@ class PaylineService implements PaylineAwareInterface
         return [
             self::AUTHORIZATION,
             self::AUTHORIZATION_VALIDATION
-        ];  
+        ];
     }
 }
