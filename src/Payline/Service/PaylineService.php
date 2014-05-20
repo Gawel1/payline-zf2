@@ -19,9 +19,15 @@ class PaylineService implements PaylineAwareInterface
     const POUND_STERLING_CURRENCY     = 826;
     const CANADIAN_DOLLAR_CURRENCY    = 124;
 
+    const EURO_SYMBOL                 = '€';
+    const DOLLAR_SYMBOL               = '$';
+    const SWISS_FRANC_SYMBOL          = 'F';
+    const POUND_STERLING_SYMBOL       = '£';
+
     const AUTHORIZATION               = 100;
     const AUTHORIZATION_VALIDATION    = 101;
 
+    const TRANSACTION_APPROVED        = '00000';
 
     /**
      * Execute web paiment and catch response
@@ -47,7 +53,8 @@ class PaylineService implements PaylineAwareInterface
     public function getWebPaymentDetails($token)
     {
         $config = $this->getClient()->getServiceLocator()->get('config');
-        return $this->getClient()->getWebPaymentDetails(['version' => $config['version'], $token]);
+
+        return $this->getClient()->getWebPaymentDetails(['version' => $config['payline']['version'], 'token' => $token]);
     }
 
     /**
@@ -91,6 +98,22 @@ class PaylineService implements PaylineAwareInterface
         return [
             self::AUTHORIZATION,
             self::AUTHORIZATION_VALIDATION
+        ];
+    }
+
+    /**
+     * Get the currencies symbol
+     *
+     * @return array
+     */
+    public static function getCurrenciesSymbols()
+    {
+        return [
+            self::EURO_CURRENCY            => self::EURO_SYMBOL,
+            self::AMERICAN_DOLLAR_CURRENCY => self::DOLLAR_SYMBOL,
+            self::SWISS_FRANC_CURRENCY     => self::SWISS_FRANC_SYMBOL,
+            self::POUND_STERLING_CURRENCY  => self::POUND_STERLING_SYMBOL,
+            self::CANADIAN_DOLLAR_CURRENCY => self::DOLLAR_SYMBOL
         ];
     }
 }
