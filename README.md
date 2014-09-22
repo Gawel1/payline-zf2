@@ -27,10 +27,11 @@ $this->getServiceLocator()->get('payline');
            'returnURL'    => $base . $this->url()->fromRoute('home'),
             'cancelURL'    => $base . $this->url()->fromRoute('home'),
             'payment'      => [
-                'amount'   => 100,
-                'action'   => 101,
-                'currency' => 978,
-                'mode'     => PaylineService::CASH_PAYMENT
+                'amount'         => 100,
+                'action'         => 101,
+                'currency'       => 978,
+                'mode'           => PaylineService::CASH_PAYMENT,
+                'contractNumber' => $this->getServiceLocator()->get('config')['payline']['contractNumber']
             ],
             'order'        => [
                 'amount'   => 100,
