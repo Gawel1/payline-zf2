@@ -547,6 +547,12 @@ if ( !defined('__LIB_DEBUG_PHP') )
 
 		return $string;
 	}
-
+	
+	function addTransactionData($contractNumber,$orderRef,$transactionId,$amount,$currency,$resultCode){
+		$transactionsFile = '../index/transactions.dat';
+		$handle = fopen($transactionsFile, 'a+');
+		fwrite($handle, MERCHANT_ID."#$contractNumber#$orderRef#$transactionId#".time()."#$resultCode \n");
+		fclose($handle);
+	}	
 } // fin de la directive contre les inclusions multiples
 ?>

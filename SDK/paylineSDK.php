@@ -3,7 +3,7 @@
 // OBJECTS DEFINITIONS
 //
 
-class util{
+class paylineUtil{
 
 	/**
 	 * make an array from a payline server response object.
@@ -15,7 +15,7 @@ class util{
 		$array = array();
 		foreach($response as $k=>$v){
 			if (is_object($v))  {
-				$array[$k] = util::responseToArray($v);
+				$array[$k] = paylineUtil::responseToArray($v);
 			}
 			else { $array[$k] = $v;
 			}
@@ -31,7 +31,7 @@ class util{
 		foreach($response as $k=>$v){
 
 			if (is_object($v) && ($k != 'cards' ) )  {
-				$array[$k] = util::responseToArrayForGetCards($v);
+				$array[$k] = paylineUtil::responseToArrayForGetCards($v);
 			}
 			else {
 				if($k == 'cards' && count($v) == 1 ){
@@ -57,6 +57,7 @@ class pl_payment{
 	public $currency;
 	public $action;
 	public $mode;
+	public $method;
 	public $contractNumber;
 	public $differedActionDate;
 }
@@ -79,6 +80,8 @@ class pl_order{
 	public $details;
 	public $deliveryTime;
 	public $deliveryMode;
+	public $deliveryExpectedDate;
+	public $deliveryExpectedDelay;
 
 	function __construct() {
 		$this->date = date('d/m/Y H:i', time());
@@ -112,12 +115,16 @@ class  pl_authorization{
 class  pl_address{
 
 	// ATTRIBUTES LISTING
+	public $title;
+	public $firstName;
+	public $lastName;
 	public $name;
 	public $street1;
 	public $street2;
 	public $cityName;
 	public $zipCode;
 	public $country;
+	public $state;
 	public $phone;
 }
 
@@ -140,6 +147,7 @@ class  pl_ownerAddress{
 class pl_buyer{
 
 	// ATTRIBUTES LISTING
+	public $title;
 	public $lastName;
 	public $firstName;
 	public $email;
@@ -183,6 +191,12 @@ class pl_orderDetail{
 	public $price;
 	public $quantity;
 	public $comment;
+	public $category;
+	public $subcategory1;
+	public $subcategory2; 
+	public $brand;
+	public $additionalData;
+	public $taxRate;
 }
 
 //
@@ -267,6 +281,8 @@ class pl_wallet{
 	public $shippingAddress;
 	public $card;
 	public $comment;
+	public $default;
+	public $cardStatus;
 
 	function __construct() {
 	}
@@ -284,6 +300,24 @@ class pl_recurring{
 	public $billingLeft;
 	public $billingDay;
 	public $startDate;
+	public $endDate;
+	public $newAmount;
+	public $amountModificationDate;
+
+	function __construct() {
+	}
+}
+
+//
+// PL_BILLINGRECORD OBJECT DEFINITION
+//
+class pl_billingRecord{
+
+	// ATTRIBUTES LISTING
+	public $date;
+	public $amount;
+	public $status;
+	public $executionDate;
 
 	function __construct() {
 	}
@@ -337,21 +371,25 @@ class pl_cheque{
 	}
 }
 
-final class Log {
+final class paylineLog {
 	private $filename;
 	private $path;
 
-	public function __construct($filename) {
+	public function __construct($filename, $path=null) {
 		$this->filename = $filename;
-		$tmp = explode(DIRECTORY_SEPARATOR ,dirname(__FILE__));
-		
-		// up one level from the current directory
-		for($i=0,$s = sizeof($tmp)-1; $i<$s; $i++){
-			$this->path .= $tmp[$i].DIRECTORY_SEPARATOR;
+		if($path == null){
+			$tmp = explode(DIRECTORY_SEPARATOR ,dirname(__FILE__));
+			
+			// up one level from the current directory
+			for($i=0,$s = sizeof($tmp)-1; $i<$s; $i++){
+				$this->path .= $tmp[$i].DIRECTORY_SEPARATOR;
+			}
+			$this->path .= 'logs'.DIRECTORY_SEPARATOR;
+		}else{
+			$this->path = $path;
 		}
-		$this->path .= 'logs'.DIRECTORY_SEPARATOR;
 	}
-
+	
 	public function write($message) {
 		$file = $this->path.$this->filename;
 		$handle = fopen($file, 'a+');
@@ -366,14 +404,16 @@ final class Log {
 class paylineSDK{
 
 	// kit version
-	const KIT_VERSION	= 'kit PHP v1.4';
+	const KIT_VERSION	= 'kit PHP v4.39';
 	
 	// trace log
-	var $paylineTrace;
+	var $logger;
+	var $flagLog; // 0 : pas de log / 1 : log par défaut / 2 : chemin personnalisé (pathLog)
+	var $pathLog;
 
 	// SOAP URL's
 	const PAYLINE_NAMESPACE			= 'http://obj.ws.payline.experian.com';
-	const WSDL						= 'v4.35.3.wsdl';
+	const WSDL						= 'v4.39.wsdl';
 	const PROD_ENDPOINT				= 'https://services.payline.com/V4/services/';
 	const HOMO_ENDPOINT				= 'https://homologation.payline.com/V4/services/';
 	const HOMO_GET_TOKEN_SERVLET	= "https://homologation-webpayment.payline.com/webpayment/getToken";
@@ -424,16 +464,32 @@ class paylineSDK{
 
 	// WALLET
 	public $walletIdList;
+	
+	// custom logo path
+	const DEFAULT_LOGO_DIR = 'customLogos';
+	var $customLogoPath = '';
+	
+	// getMerchantSettings Array
+	private $posData;
 
 	/**
 	 * contructor of PAYLINESDK CLASS
 	 **/
-	function __construct($merchant_id, $acess_key, $proxy_host, $proxy_port, $proxy_login, $proxy_password, $production) {
+	function __construct($merchant_id, $access_key, $proxy_host, $proxy_port, $proxy_login, $proxy_password, $production, $pathLog = null) {
+		if(is_null($pathLog)){
+			$this->flagLog = 1;
+		}elseif (strlen($pathLog) == 0){
+			$this->flagLog = 0;
+		}else{
+			$this->flagLog = 2;
+			$this->pathLog = $pathLog;
+		}
+		
 		$this->writeTrace('----------------------------------------------------------');
-		$this->writeTrace("paylineSDK::__construct($merchant_id, ".$this->maskAccessKey($acess_key).", $proxy_host, $proxy_port, $proxy_login, $proxy_password, $production)");
+		$this->writeTrace("paylineSDK::__construct($merchant_id, ".$this->maskAccessKey($access_key).", $proxy_host, $proxy_port, $proxy_login, $proxy_password, $production)");
 		$this->header_soap = array();
 		$this->header_soap['login'] = $merchant_id;
-		$this->header_soap['password'] = $acess_key;
+		$this->header_soap['password'] = $access_key;
 		if($proxy_host != ''){
 			$this->header_soap['proxy_host'] = $proxy_host;
 			$this->header_soap['proxy_port'] = $proxy_port;
@@ -731,6 +787,25 @@ class paylineSDK{
 		}
 		else return null;
 	}
+	
+	/**
+	 * function billingRecord
+	 * @params : array : array. the array keys are listed in pl_billingRecord CLASS.
+	 * @return : billingRecord object.
+	 * @description : build a billingRecord object.
+	 **/
+	protected function billingRecord($array) {
+		if($array){
+			$billingRecord = new pl_billingRecord();
+			if($array && is_array($array)){
+				foreach($array as $k=>$v){
+					if(array_key_exists($k, $billingRecord)&&(strlen($v)))$billingRecord->$k = $v;
+				}
+			}
+			return $billingRecord;
+		}
+		else return null;
+	}
 
 	/**
 	 * function setItem
@@ -786,10 +861,19 @@ class paylineSDK{
 	* @param $trace : the string to add in the log file
 	*/
 	public function writeTrace($trace){
-		if(!isset($this->paylineTrace)){
-			$this->paylineTrace = new Log(date('Y-m-d',time()).'.log');
+		if($this->flagLog == 0){
+			return;
+		}else{
+			if(!isset($this->logger)){
+				if($this->flagLog == 1){ // log dans le répertoire par défaut
+					$this->logger = new paylineLog(date('Y-m-d',time()).'.log');
+				}
+				if($this->flagLog == 2){ // log dans un répertoire spécifié
+					$this->logger = new paylineLog(date('Y-m-d',time()).'.log',$this->pathLog);
+				}
+			}
+			$this->logger->write($trace);
 		}
-		$this->paylineTrace->write($trace);
 	}
 	
 	/**
@@ -972,6 +1056,15 @@ class paylineSDK{
 				case 'createWebWallet':
 					$WSresponse = $client->createWebWallet($WSRequest);
 					break;
+				case 'updatePaymentRecord':
+					$WSresponse = $client->updatePaymentRecord($WSRequest);
+					break;
+				case 'getBillingRecord':
+					$WSresponse = $client->getBillingRecord($WSRequest);
+					break;
+				case 'updateBillingRecord':
+					$WSresponse = $client->updateBillingRecord($WSRequest);
+					break;
 				case 'disablePaymentRecord':
 					$WSresponse = $client->disablePaymentRecord($WSRequest);
 					break;
@@ -1056,6 +1149,9 @@ class paylineSDK{
 				case 'transactionsSearch':
 					$WSresponse = $client->transactionsSearch($WSRequest);
 					break;
+				case 'unBlock':
+					$WSresponse = $client->unBlock($WSRequest);
+					break;
 				case 'updateWallet':
 					$WSresponse = $client->updateWallet($WSRequest);
 					break;
@@ -1070,18 +1166,18 @@ class paylineSDK{
 					break;
 			}
 			if($Method == 'getCards'){
-				$response = util::responseToArrayForGetCards($WSresponse);
+				$response = paylineUtil::responseToArrayForGetCards($WSresponse);
 				
 			}else{
-				$response = util::responseToArray($WSresponse);
+				$response = paylineUtil::responseToArray($WSresponse);
 			}
 			return $response;
 		}catch ( Exception $e ) {
 			$this->writeTrace("Exception : ".$e->getMessage());
-			$ERROR = new pl_result();
-			$ERROR->code = paylineSDK::ERR_CODE;
-			$ERROR->longMessage = $e->getMessage();
-			$ERROR->shortMessage = $e->getMessage();
+			$ERROR = array();
+			$ERROR['result']['code'] = paylineSDK::ERR_CODE;
+			$ERROR['result']['longMessage'] = $e->getMessage();
+			$ERROR['result']['shortMessage'] = $e->getMessage();
 			return $ERROR;
 		}
 	}
@@ -1214,9 +1310,13 @@ class paylineSDK{
 	}
 	
 	public function doImmediateWalletPayment($array){
+		if(!isset($array['buyer']))$array['buyer'] = null;
+		if(!isset($array['billingAddress']))$array['billingAddress'] = null;
+		if(!isset($array['shippingAddress']))$array['shippingAddress'] = null;
 		$WSRequest = array (
 			'payment' => $this->payment($array['payment']),
 			'order' =>  $this->order($array['order']),
+			'buyer' => $this->buyer($array['buyer'],$array['shippingAddress'],$array['billingAddress']),
 			'walletId' =>  $array['walletId'],
 			'cardInd' => $array['cardInd'],
 			'cvx' => $array['walletCvx'],
@@ -1383,12 +1483,169 @@ class paylineSDK{
 		return $this->webServiceRequest($array,$WSRequest,paylineSDK::DIRECT_API,'getMerchantSettings');
 	}
 	
+	private function addPOSFromObject($oPointOfSell,$pos){
+		if(isset($oPointOfSell->contracts->contract)){
+			$this->posData[$pos] = array();
+			$this->posData[$pos]['label'] = $oPointOfSell->label;
+			$this->posData[$pos]['contracts'] = array();
+			if(sizeof($oPointOfSell->contracts->contract) > 1){
+				// more than 1 active contract in this point of sell
+				$ctr = 0;
+				foreach ($oPointOfSell->contracts->contract as $contract){
+					$this->posData[$pos]['contracts'][$ctr] = array();
+					$this->posData[$pos]['contracts'][$ctr]['cardType'] = $contract->cardType;
+					$this->posData[$pos]['contracts'][$ctr]['label'] = $contract->label;
+					$this->posData[$pos]['contracts'][$ctr]['contractNumber'] = $contract->contractNumber;
+					$this->posData[$pos]['contracts'][$ctr]['logo'] = '';
+					if($contract->logoEnable){
+						$this->posData[$pos]['contracts'][$ctr]['logo'] = $this->downloadCustomLogo($contract->normalLogo, $contract->normalLogoMime, $contract->contractNumber, $oPointOfSell->label);
+					}
+					$ctr++;
+				}
+			}else{ // only 1 active contract in this point of sell
+				$this->posData[$pos]['contracts'][0] = array();
+				$this->posData[$pos]['contracts'][0]['cardType'] = $oPointOfSell->contracts->contract->cardType;
+				$this->posData[$pos]['contracts'][0]['label'] = $oPointOfSell->contracts->contract->label;
+				$this->posData[$pos]['contracts'][0]['contractNumber'] = $oPointOfSell->contracts->contract->contractNumber;
+				$this->posData[$pos]['contracts'][0]['logo'] = '';
+				if($oPointOfSell->contracts->contract->logoEnable){
+					$this->posData[$pos]['contracts'][0]['logo'] = $this->downloadCustomLogo($oPointOfSell->contracts->contract->normalLogo, $oPointOfSell->contracts->contract->normalLogoMime, $oPointOfSell->contracts->contract->contractNumber, $oPointOfSell->label);
+				}
+			}
+		}else{ // no contract in this point of sell
+			return false;
+		}
+	
+		return true;
+	}
+	
+	private function addPOSFromArray($aPointOfSell,$pos){
+		if(isset($aPointOfSell['contracts']['contract'])){
+			$this->posData[$pos] = array();
+			$this->posData[$pos]['label'] = $aPointOfSell['label'];
+			$this->posData[$pos]['contracts'] = array();
+			if(isset($aPointOfSell['contracts']['contract']['label'])){
+				// only 1 active contract in this point of sell
+				$this->posData[$pos]['contracts'][0] = array();
+				$this->posData[$pos]['contracts'][0]['cardType'] = $aPointOfSell['contracts']['contract']['cardType'];
+				$this->posData[$pos]['contracts'][0]['label'] = $aPointOfSell['contracts']['contract']['label'];
+				$this->posData[$pos]['contracts'][0]['contractNumber'] = $aPointOfSell['contracts']['contract']['contractNumber'];
+				$this->posData[$pos]['contracts'][0]['logo'] = '';
+				if($aPointOfSell['contracts']['contract']['logoEnable']){
+					$this->posData[$pos]['contracts'][0]['logo'] = $this->downloadCustomLogo($aPointOfSell['contracts']['contract']['normalLogo'], $aPointOfSell['contracts']['contract']['normalLogoMime'], $aPointOfSell['contracts']['contract']['contractNumber'], $aPointOfSell['label']);
+				}
+			}else{ // more than 1 active contract in this point of sell
+				$ctr = 0;
+				foreach ($aPointOfSell['contracts']['contract'] as $contract){
+					$this->posData[$pos]['contracts'][$ctr] = array();
+					$this->posData[$pos]['contracts'][$ctr]['cardType'] = $contract->cardType;
+					$this->posData[$pos]['contracts'][$ctr]['label'] = $contract->label;
+					$this->posData[$pos]['contracts'][$ctr]['contractNumber'] = $contract->contractNumber;
+					$this->posData[$pos]['contracts'][$ctr]['logo'] = '';
+					if($contract->logoEnable){
+						$this->posData[$pos]['contracts'][$ctr]['logo'] = $this->downloadCustomLogo($contract->normalLogo, $contract->normalLogoMime, $contract->contractNumber, $aPointOfSell['label']);
+					}
+					$ctr++;
+				}
+			}
+		}else{ // no contract in this point of sell
+			return false;
+		}
+		return true;
+	}
+	
+	private function absoluteURL($path) {
+		$dir = str_replace('\\', '/', dirname($path));
+		return $_SERVER['HTTP_ORIGIN'].'/'.substr($dir, strlen($_SERVER['DOCUMENT_ROOT'])).'/';
+	}
+	
+	private function downloadCustomLogo($base64String,$mimeType,$contractNumber,$posLabel){
+		$mime = explode('/', $mimeType);
+		if($this->customLogoPath != null){
+			if(!file_exists($this->customLogoPath)){
+				mkdir($this->customLogoPath);
+			}
+			$posDir = $this->customLogoPath.$posLabel.DIRECTORY_SEPARATOR;
+		}else{
+			$merchantDir = dirname(__DIR__).DIRECTORY_SEPARATOR.paylineSDK::DEFAULT_LOGO_DIR.DIRECTORY_SEPARATOR.$this->header_soap['login'].DIRECTORY_SEPARATOR;
+			if(!file_exists($merchantDir)){
+				mkdir($merchantDir);
+			}
+			$posDir = $merchantDir.$posLabel.DIRECTORY_SEPARATOR;
+		}
+		if(!file_exists($posDir)){
+			mkdir($posDir);
+		}
+		$output_file = $posDir.$contractNumber.'.'.$mime[1];
+	
+		try{
+			if(file_put_contents($output_file,$base64String)){
+				return $this->absoluteURL($output_file).$contractNumber.'.'.$mime[1];
+			}else{
+				$this->writeTrace("Error : downloadCustomLogo for contract $contractNumber under $posDir failed");
+				return paylineSDK::ERR_CODE;
+			}
+		}catch (Exception $e){
+			$this->writeTrace("Exception : downloadCustomLogo for contract $contractNumber of pos $posLabel - ".$e->getMessage());
+			return paylineSDK::ERR_CODE;
+		}
+	}
+	
+	public function getMerchantSettingsToArray($array){
+		if(isset($array['logoPath'])){
+			$this->customLogoPath = $array['logoPath'];
+		}
+		$getMerchantSettingsRes = $this->getMerchantSettings($array);
+		if(isset($getMerchantSettingsRes['listPointOfSell']['pointOfSell']['label'])){
+			// only 1 active point of sell
+			$aPointOfSell = $getMerchantSettingsRes['listPointOfSell']['pointOfSell'];
+			$this->addPOSFromArray($aPointOfSell, 0);
+		}else{ // more than 1 active point of sell
+			$index = 0;
+			foreach ($getMerchantSettingsRes['listPointOfSell']['pointOfSell'] as $oPointOfSell){
+				if($this->addPOSFromObject($oPointOfSell, $index)){
+					$index++; // no incrementation if pos was not added
+				}
+			}
+		}
+		$res = array('result' => $getMerchantSettingsRes['result'],'POS' => $this->posData);
+		return $res;
+	}
+	
 	public function getPaymentRecord($array){
 		$WSRequest = array (
 			'contractNumber' => $array['contractNumber'],
 			'paymentRecordId' =>  $array['paymentRecordId']
 		);
 		return $this->webServiceRequest($array,$WSRequest,paylineSDK::DIRECT_API,'getPaymentRecord');
+	}
+	
+	public function updatePaymentRecord($array){
+		$WSRequest = array (
+			'contractNumber' => $array['contractNumber'],
+			'paymentRecordId' =>  $array['paymentRecordId'],
+			'recurring' =>  $this->recurring($array['recurring']),
+		);
+		return $this->webServiceRequest($array,$WSRequest,paylineSDK::DIRECT_API,'updatePaymentRecord');
+	}
+	
+	public function getBillingRecord($array){
+		$WSRequest = array (
+				'contractNumber' => $array['contractNumber'],
+				'paymentRecordId' =>  $array['paymentRecordId'],
+				'billingRecordId' =>  $array['billingRecordId']
+		);
+		return $this->webServiceRequest($array,$WSRequest,paylineSDK::DIRECT_API,'getBillingRecord');
+	}
+	
+	public function updateBillingRecord($array){
+		$WSRequest = array (
+			'contractNumber' => $array['contractNumber'],
+			'paymentRecordId' =>  $array['paymentRecordId'],
+			'billingRecordId' =>  $array['billingRecordId'],
+			'billingRecordForUpdate' => $this->billingRecord($array['billingRecordForUpdate'])
+		);
+		return $this->webServiceRequest($array,$WSRequest,paylineSDK::DIRECT_API,'updateBillingRecord');
 	}
 	
 	public function getToken($array){
@@ -1483,6 +1740,14 @@ class paylineSDK{
 			'token' => $array['token']
 		);
 		return $this->webServiceRequest($array,$WSRequest,paylineSDK::EXTENDED_API,'transactionsSearch');
+	}
+	
+	public function unBlock($array){
+		$WSRequest = array (
+			'transactionID' => $array['transactionID'], 
+			'transactionDate' => $array['transactionDate']
+		);
+		return $this->webServiceRequest($array,$WSRequest,paylineSDK::DIRECT_API,'unBlock');
 	}
 	
 	public function updateWallet($array){
