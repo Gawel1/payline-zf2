@@ -38,8 +38,6 @@ class PaylineService implements PaylineAwareInterface
      */
     public function doWebPayment(array $params)
     {
-        $config = $this->getClient()->getServiceLocator()->get('config');
-        $params['contracts'] = $config['payline']['contracts'];
         return $this->getClient()->doWebPayment($params);
     }
 
