@@ -2,7 +2,7 @@
 //     return [
 //         'payline' => [
 //             'version'        => "3",
-//             'contracts'      => [],
+//             'contractNumber' => '',
 //             'merchant_id'    => '',
 //             'access_key'     => '',
 //             'proxy_host'     => '',
